@@ -1,3 +1,5 @@
-arabica.exe
-arabica
+arabica-compiler.exe
+arabica-compiler
+arabica-test.exe
+arabica-test
 .vscode/

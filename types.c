@@ -46,6 +46,15 @@ typedef struct {
 } INSTRUCTION;
 
 
+typedef struct {
+    LOAD_RET_CODE retcode;
+    char *reason;
+
+    int instr_count;
+    INSTRUCTION *instructions;
+} LOAD_INSTRUCTION_RESULT;
+
+
 ARGUMENT_TYPE get_argument_type_by_keyword(char *keyword) {
     if (strcmp(keyword, NUM_8_KEY) == 0) {
         return NUM_8;
@@ -65,13 +74,27 @@ ARGUMENT_TYPE get_argument_type_by_keyword(char *keyword) {
 }
 
 
-typedef struct {
-    LOAD_RET_CODE retcode;
-    char *reason;
-
-    int instr_count;
-    INSTRUCTION *instructions;
-} LOAD_INSTRUCTION_RESULT;
+char *get_argument_type_name(ARGUMENT_TYPE type) {
+    switch (type)
+    {
+    case NUM_8:
+        return "NUM_8";
+    case NUM_32:
+        return "NUM_32";
+    case VAR:
+        return "VAR";
+    case STR:
+        return "STR";
+    case CHAR:
+        return "CHAR";
+    case ADDR:
+        return "ADDR";
+    case INVALID:
+        return "INVALID";
+    default:
+        return "UNKNOWN";
+    }
+}
 
 
 int is_int(char *str) {
@@ -258,56 +281,6 @@ LOAD_INSTRUCTION_RESULT load_language_instructions() {
     result.instr_count = instr_count;
     result.instructions = instructions;
     return result;
-}
-
-
-char *get_argument_type_name(ARGUMENT_TYPE type) {
-    switch (type)
-    {
-    case NUM_8:
-        return "NUM_8";
-    case NUM_32:
-        return "NUM_32";
-    case VAR:
-        return "VAR";
-    case STR:
-        return "STR";
-    case CHAR:
-        return "CHAR";
-    case ADDR:
-        return "ADDR";
-    case INVALID:
-        return "INVALID";
-    default:
-        return "UNKNOWN";
-    }
-}
-
-
-int main() {
-    LOAD_INSTRUCTION_RESULT result = load_language_instructions();
-
-    if (result.retcode == RET_BAD_FILE_HANDLE) {
-        printf("Bad file handle");
-    } else if (result.retcode == RET_INVALID_SYNTAX) {
-        printf("Invalid Syntax: %s", result.reason);
-    } else {
-        printf("\nFound Instructions:\n");
-        for (int i = 0; i < result.instr_count; i++) {
-            INSTRUCTION instr = result.instructions[i];
-            printf("----- %s -----\n", instr.name);
-            printf("- ID: %d\n", instr.id);
-            printf("- ARGS: %d\n", instr.arg_count);
-            if (instr.arg_count > 0) {
-                for (int j = 0; j < instr.arg_count; j++) {
-                    printf("  - %s\n", get_argument_type_name(instr.args[j]));
-                }
-            }
-            printf("\n");
-        }
-    }
-
-    return 0;
 }
 
 

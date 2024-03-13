@@ -1,11 +1,17 @@
+SRC_FILES = $(filter-out instruction-test.c, $(wildcard *.c))
+TEST_SRC_FILES = instruction-test.c types.c trim.c
+
 all:
-	gcc -o arabica *.c -Wall -Wextra -Werror
+	gcc -o arabica-compiler $(SRC_FILES) -Wall -Wextra -Werror
 
 clean:
-	rm -f arabica.exe & rm -f arabica
+	rm -f arabica-compiler.exe & rm -f arabica-compiler
+	rm -f arabica-test.exe & rm -f arabica-test
 
 fclean:
-	rm -f arabica.exe & rm -f arabica
+	rm -f arabica-compiler.exe & rm -f arabica-compiler
+	rm -f arabica-test.exe & rm -f arabica-test
 
-run: all
-	./arabica
+test:
+	gcc -o arabica-test $(TEST_SRC_FILES) -Wall -Wextra -Werror
+	./arabica-test
