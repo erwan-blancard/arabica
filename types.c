@@ -47,17 +47,17 @@ typedef struct {
 
 
 ARGUMENT_TYPE get_argument_type_by_keyword(char *keyword) {
-    if (strcmp(keyword, NUM_8_KEY)) {
+    if (strcmp(keyword, NUM_8_KEY) == 0) {
         return NUM_8;
-    } else if (strcmp(keyword, NUM_32_KEY)) {
+    } else if (strcmp(keyword, NUM_32_KEY) == 0) {
         return NUM_32;
-    } else if (strcmp(keyword, VAR_KEY)) {
+    } else if (strcmp(keyword, VAR_KEY) == 0) {
         return VAR;
-    } else if (strcmp(keyword, ADDR_KEY)) {
+    } else if (strcmp(keyword, ADDR_KEY) == 0) {
         return ADDR;
-    } else if (strcmp(keyword, STR_KEY)) {
+    } else if (strcmp(keyword, STR_KEY) == 0) {
         return STR;
-    } else if (strcmp(keyword, CHAR_KEY)) {
+    } else if (strcmp(keyword, CHAR_KEY) == 0) {
         return CHAR;
     }
     
@@ -260,6 +260,30 @@ LOAD_INSTRUCTION_RESULT load_language_instructions() {
     return result;
 }
 
+
+char *get_argument_type_name(ARGUMENT_TYPE type) {
+    switch (type)
+    {
+    case NUM_8:
+        return "NUM_8";
+    case NUM_32:
+        return "NUM_32";
+    case VAR:
+        return "VAR";
+    case STR:
+        return "STR";
+    case CHAR:
+        return "CHAR";
+    case ADDR:
+        return "ADDR";
+    case INVALID:
+        return "INVALID";
+    default:
+        return "UNKNOWN";
+    }
+}
+
+
 int main() {
     LOAD_INSTRUCTION_RESULT result = load_language_instructions();
 
@@ -276,7 +300,7 @@ int main() {
             printf("- ARGS: %d\n", instr.arg_count);
             if (instr.arg_count > 0) {
                 for (int j = 0; j < instr.arg_count; j++) {
-                    printf("  - %d\n", instr.args[i]);
+                    printf("  - %s\n", get_argument_type_name(instr.args[j]));
                 }
             }
             printf("\n");
