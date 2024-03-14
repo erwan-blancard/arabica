@@ -282,13 +282,3 @@ LOAD_INSTRUCTION_RESULT load_language_instructions() {
     result.instructions = instructions;
     return result;
 }
-
-
-// TODO move to compiler
-// typedef struct {
-//     char *name;
-
-//     // Will be used to calculate an offset 
-//     // of the address of the label for jump instructions.
-//     int alignment;
-// } LABEL;
