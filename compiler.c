@@ -1,9 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "types.h"
 #include "trim.h"
+#include "utils.h"
 
 #if defined(_WIN32) || defined(_WIN64)
 #define EXEC_NAME "arabica-compiler.exe"
