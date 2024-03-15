@@ -19,8 +19,6 @@ typedef struct {
 //
 // LOAD_STR "Hello"
 // -> {LOAD_STR, "Hello"}
-//
-// TODO do negative numbers
 TOKEN_LIST extract_tokens(char *line) {
     TOKEN_LIST result = {0, NULL};
 

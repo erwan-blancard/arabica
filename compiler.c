@@ -19,7 +19,7 @@
 #define DEFAULT_PROGRAM_NAME "PROGRAM"
 #define EXT_NAME ".cabc"
 
-#define LINE_BUFF_SIZE 256
+#define LINE_BUFF_SIZE 512
 
 
 typedef struct {
@@ -27,8 +27,14 @@ typedef struct {
 
     // Will be used to calculate an offset 
     // of the address of the label for jump instructions.
-    long alignment;
+    uint32_t alignment;
 } LABEL;
+
+
+typedef struct {
+    INSTRUCTION *instr;
+    void **args;
+} PreprocessedInstruction;
 
 
 void print_help() {
@@ -49,6 +55,52 @@ long index_of_matching_instruction(char *token, INSTRUCTION *instructions, long 
 }
 
 
+void write_instruction(PreprocessedInstruction prep, FILE *f) {
+    fwrite(&prep.instr->id, sizeof(uint8_t), 1, f);     // id
+
+    for (int i = 0; i < prep.instr->arg_count; i++) {   // args
+        switch (prep.instr->args[i]) {
+        case NUM_32:
+            fwrite(prep.args[i], sizeof(int32_t), 1, f);
+            break;
+        case STR:
+            char *str = (char*)prep.args[i];
+            int len = (int)strlen(str);
+            fwrite(&len, sizeof(uint8_t), 1, f);
+            fwrite(str, sizeof(char), len, f);
+            break;
+        default:    // case NUM_U8 CHAR VAR or ADDR
+            fwrite(prep.args[i], sizeof(uint8_t), 1, f);
+            break;
+        }
+    }
+}
+
+
+size_t size_of_instruction(PreprocessedInstruction instr) {
+    size_t size = 1;   // id of instruction
+
+    for (int i = 0; i < instr.instr->arg_count; i++) {
+        switch (instr.instr->args[i]) {
+        case NUM_32:
+            size = size + 4;
+            break;
+        case ADDR:
+            size = size + 4;
+            break;
+        case STR:
+            size = size + 1 + strlen((char*)instr.args[i]);
+            break;
+        default:
+            size++;
+            break;
+        }
+    }
+    
+    return size;
+}
+
+
 // TODO free mem
 int compile_to_bytecode(const char *source_file, char *program_name) {
     LOAD_INSTRUCTION_RESULT available_instructions = load_language_instructions();
@@ -61,7 +113,7 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
     }
 
     FILE *src = fopen(source_file, "r");
-    if (src == NULL) {
+    if (!src) {
         printf("Could not open source file %s !\n", source_file);
         return -1;
     }
@@ -72,7 +124,7 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
 
     char *out_file_name = (char*)malloc(sizeof(char) * (source_name_len+ext_name_len-1));
 
-    if (out_file_name == NULL) {
+    if (!out_file_name) {
         printf("Could not create output file !\n");
         return -1;
     }
@@ -84,7 +136,7 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
     }
 
     FILE *out = fopen(out_file_name, "wb");
-    if (out == NULL) {
+    if (!out) {
         printf("Could not create output file %s !\n", out_file_name);
         return -1;
     }
@@ -92,7 +144,7 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
     long code_size = 0;
 
     long instr_count = 0;
-    INSTRUCTION *instructions = NULL;
+    PreprocessedInstruction *prep_instructions;
 
     int var_count = 0;
     char **variables = (char**)malloc(sizeof(char*) * MAX_VARS);
@@ -102,7 +154,7 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
 
 
     char line_buff[LINE_BUFF_SIZE];
-    long line_number = 0;
+    size_t line_number = 0;
     while (fgets(line_buff, LINE_BUFF_SIZE, src) != NULL) {
         TOKEN_LIST token_list = extract_tokens(line_buff);
 
@@ -117,15 +169,15 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
             if (label_count == 0) {
                 labels = (LABEL*)malloc(sizeof(LABEL)*(label_count+1));
                 // check if malloc failed
-                if (labels == NULL) {
-                    printf("Failed to allocate memory for label !");
+                if (!labels) {
+                    printf("Failed to allocate memory for label !\n");
                     return -1;
                 }
             } else {
                 LABEL *tmp = (LABEL*)realloc(labels, sizeof(LABEL)*(label_count+1));
                 // check if realloc failed
-                if (tmp == NULL) {
-                    printf("Failed to reallocate memory for label !");
+                if (!tmp) {
+                    printf("Failed to reallocate memory for label !\n");
                     return -1;
                 } else {
                     labels = tmp;
@@ -133,14 +185,26 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
             }
 
             char *label_name = (char*)malloc(sizeof(char) * strlen(token_list.tokens[0])-1);
-            if (label_name == NULL) {
-                printf("Failed to allocate memory for label name !");
+            if (!label_name) {
+                printf("Failed to allocate memory for label name !\n");
                 return -1;
             }
 
             strncpy(label_name, token_list.tokens[0], strlen(token_list.tokens[0])-1);
+
+            // check if label already exist
+            for (int l = 0; l < label_count; l++) {
+                if (strcmp(label_name, labels[l].name) == 0) {
+                    printf("Error: Duplicated label %s ! (Ln:%lld)\n", label_name, line_number);
+                    free(label_name);
+                    return -1;
+                }
+            }
+
             labels[label_count].name = label_name;
             labels[label_count].alignment = code_size;
+
+            label_count++;
 
         } else {        // if instruction
 
@@ -148,14 +212,23 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
             long instr_index = index_of_matching_instruction(token_list.tokens[0], available_instructions.instructions, available_instructions.instr_count);
             
             if (instr_index == -1) {
-                printf("Error: Instruction \"%s\" does not match any defined program instructions ! (Ln:%ld)\n", token_list.tokens[0], line_number);
+                printf("Error: Instruction \"%s\" does not match any defined program instructions ! (Ln:%lld)\n", token_list.tokens[0], line_number);
                 return -1;
             }
 
             // check args count
             if (token_list.count-1 != available_instructions.instructions[instr_index].arg_count) {
-                printf("Error: Invalid number of arguments. Expected %d, got %d. (Ln:%ld)\n", available_instructions.instructions[instr_index].arg_count, token_list.count-1, line_number);
+                printf("Error: Invalid number of arguments. Expected %d, got %d. (Ln:%lld)\n", available_instructions.instructions[instr_index].arg_count, token_list.count-1, line_number);
                 return -1;
+            }
+
+            void **args = NULL;
+            if (available_instructions.instructions[instr_index].arg_count) {
+                args = (void**)malloc(sizeof(void*)*available_instructions.instructions[instr_index].arg_count);
+                if (!args) {
+                    printf("Failed to allocate memory for args !\n");
+                    return -1;
+                }
             }
             
             // check args
@@ -175,21 +248,37 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
                     // if token isn't surrounded with "" or '' and is not an number
                     if (!arg_is_char(token_list.tokens[i+1]) && !arg_is_str(token_list.tokens[i+1]) && !is_signed_number(token_list.tokens[i+1])) {
                         
-                        char *var = (char*)malloc(sizeof(char)*strlen(token_list.tokens[i+1]));
-                        if (var == NULL) {
-                            printf("Failed to allocate memory for variable pointer !");
-                            return -1;
+                        // check if var was already declared before
+                        char *ptr_var = NULL;
+                        for (int v = 0; v < var_count; v++) {
+                            if (strcmp(token_list.tokens[i+1], variables[v]) == 0) {
+                                ptr_var = variables[v];
+                                break;
+                            }
                         }
 
-                        strcpy(var, token_list.tokens[i+1]);
+                        if (ptr_var != NULL) {
+                            arg = (void*)ptr_var;
+                        } else if (var_count+1 > MAX_VARS) {
+                            printf("Error: Could not add variable %s: max variable count reached ! (Ln:%lld)\n", token_list.tokens[i+1], line_number);
+                            return -1;
+                        } else {
+                            char *var = (char*)malloc(sizeof(char)*strlen(token_list.tokens[i+1]));
+                            if (!var) {
+                                printf("Failed to allocate memory for variable pointer !\n");
+                                return -1;
+                            }
 
-                        variables[var_count] = var;
-                        var_count++;
+                            strcpy(var, token_list.tokens[i+1]);
 
-                        arg = (void*)var;
+                            variables[var_count] = var;
+                            var_count++;
+
+                            arg = (void*)var;
+                        }
 
                     } else {
-                        printf("Error: Could not parse %s to a variable ! (Ln:%ld)\n", token_list.tokens[i+1], line_number);
+                        printf("Error: Could not parse %s to a variable ! (Ln:%lld)\n", token_list.tokens[i+1], line_number);
                         return -1;
                     }
                     break;
@@ -197,8 +286,18 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
                     // if token isn't surrounded with "" or '' and is not an number
                     if (!arg_is_char(token_list.tokens[i+1]) && !arg_is_str(token_list.tokens[i+1]) && !is_signed_number(token_list.tokens[i+1])) {
                         
+                        char *labname = (char*)malloc(sizeof(char)*strlen(token_list.tokens[i+1]));
+                        if (!labname) {
+                            printf("Failed to allocate memory for label pointer !\n");
+                            return -1;
+                        }
+
+                        strcpy(labname, token_list.tokens[i+1]);
+
+                        arg = (void*)labname;
+
                     } else {
-                        printf("Error: Could not parse %s to a label ! (Ln:%ld)\n", token_list.tokens[i+1], line_number);
+                        printf("Error: Could not parse %s to a label ! (Ln:%lld)\n", token_list.tokens[i+1], line_number);
                         return -1;
                     }
                     break;
@@ -210,15 +309,39 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
                     break;
                 }
 
-                if (arg == NULL) {
-                    printf("Error: Could not parse %s to %s ! (Ln:%ld)\n", token_list.tokens[i+1], get_argument_type_name(available_instructions.instructions[instr_index].args[i]), line_number);
+                if (!arg) {
+                    printf("Error: Could not parse %s to %s ! (Ln:%lld)\n", token_list.tokens[i+1], get_argument_type_name(available_instructions.instructions[instr_index].args[i]), line_number);
                     return -1;
                 }
 
                 // append arg to args
+                args[i] = arg;
             }
 
+            if (instr_count == 0) {
+                prep_instructions = (PreprocessedInstruction*)malloc(sizeof(PreprocessedInstruction)*(instr_count+1));
+                if (!prep_instructions) {
+                    printf("Failed to allocate memory for instructions !\n");
+                    return -1;
+                }
+            } else {
+                PreprocessedInstruction *tmp = (PreprocessedInstruction*)realloc(prep_instructions, sizeof(PreprocessedInstruction)*(instr_count+1));
+                if (!tmp) {
+                    free(prep_instructions);
+                    printf("Failed to reallocate memory for instructions !\n");
+                    return -1;
+                } else {
+                    prep_instructions = tmp;
+                }
+            }
 
+            PreprocessedInstruction prep_instr;
+            prep_instr.instr = &available_instructions.instructions[instr_index];
+            prep_instr.args = args;
+
+            prep_instructions[instr_count] = prep_instr;
+
+            instr_count++;
         }
 
         if (token_list.tokens != NULL) {
@@ -230,6 +353,72 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
 
         line_number++;
     }
+
+    fclose(src);
+
+    // link labels and variables here
+
+    for (int i = 0; i < instr_count; i++) {
+        int32_t alignment = 0;
+        for (int a = 0; a < prep_instructions[i].instr->arg_count; a++) {
+            if (prep_instructions[i].instr->args[a] == VAR) {
+                for (int v = 0; v < var_count; v++) {
+                    // compare pointers directly
+                    if (prep_instructions[i].args[a] == variables[v]) {
+                        uint8_t *var_id = (uint8_t*)malloc(sizeof(uint8_t));
+                        if (!var_id) {
+                            printf("Failed to allocate memory for variable id !\n");
+                            return -1;
+                        }
+                        *var_id = v;
+                        prep_instructions[i].args[a] = var_id;
+                    }
+                }
+
+            } else if (prep_instructions[i].instr->args[a] == ADDR) {
+                int32_t *address = NULL;
+                for (int l = 0; l < label_count; l++) {
+                    if (strcmp(prep_instructions[i].args[a], labels[l].name) == 0) {
+                        address = (int32_t*)malloc(sizeof(int32_t));
+                        if (!address) {
+                            printf("Failed to allocate memory for address offset !\n");
+                            return -1;
+                        }
+                        *address = -(alignment - labels[l].alignment);      // calculate offset from our current pos
+                        prep_instructions[i].args[a] = address;
+                    }
+                }
+
+                if (!address) {
+                    printf("Error: Label %s doesn't exist !\n", (char*)prep_instructions[i].args[a]);
+                    return -1;
+                }
+            }
+
+            alignment = alignment + size_of_instruction(prep_instructions[i]);
+        }
+    }
+
+    // write to output file
+
+    // header
+
+    char name[16];
+    if (!program_name)
+        program_name = DEFAULT_PROGRAM_NAME;
+    strncpy(name, program_name, 16);
+
+    fwrite("CODE", sizeof(char), 4, out);
+    fwrite(&code_size, sizeof(uint32_t), 1, out);
+    fwrite(name, sizeof(char), 16, out);
+
+    // write instructions
+
+    for (int i = 0; i < instr_count; i++) {
+        write_instruction(prep_instructions[i], out);
+    }
+
+    fclose(out);
 
     return 0;
 }
@@ -257,7 +446,7 @@ int main(int argc, char const *argv[]) {
 
             program_name = (char*)malloc(MAX_PROGRAM_NAME_LEN);
 
-            if (program_name == NULL) {
+            if (!program_name) {
                 printf("Could not allocate memory to store the program name !\n\n");
                 return -1;
             }

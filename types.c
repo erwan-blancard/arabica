@@ -163,7 +163,7 @@ LOAD_INSTRUCTION_RESULT load_language_instructions() {
             return result;
         }
 
-        if (!is_int(token)) {
+        if (!is_number(token)) {
             result.retcode = RET_INVALID_SYNTAX;
             char reason[] = "Invalid ID \"%s\" for instruction \"%s\" !";
             result.reason = (char*)malloc(sizeof(char)*(strlen(reason)-4+INSTR_MAX_LEN+strlen(token)));
