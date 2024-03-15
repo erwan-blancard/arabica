@@ -1,10 +1,11 @@
 #ifndef TYPES
+#define TYPES
 
 #define INSTR_MAX_LEN 32
 
 // keywords used for instruction definition
-#define NUM_8_KEY "uint8"
-#define NUM_32_KEY "uint32"
+#define NUM_U8_KEY "uint8"
+#define NUM_32_KEY "int32"
 #define CHAR_KEY "char"
 #define VAR_KEY "variable"
 #define ADDR_KEY "address"
@@ -19,8 +20,8 @@ typedef enum {
 
 typedef enum {
     INVALID,    // Only used by get_argument_type_by_keyword()
-    NUM_8,      // uint8 number
-    NUM_32,     // uint32 number
+    NUM_U8,     // uint8 number
+    NUM_32,     // int32 number
     CHAR,       // 'c'
     VAR,        // Variable (register 0-255)
     ADDR,       // address or label

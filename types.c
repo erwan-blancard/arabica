@@ -4,14 +4,15 @@
 #include <ctype.h>
 
 #include "trim.h"
+#include "utils.h"
 
 
 #define INSTR_MAX_LEN 32
 
 
 // keywords used for instruction definition
-#define NUM_8_KEY "uint8"
-#define NUM_32_KEY "uint32"
+#define NUM_U8_KEY "uint8"
+#define NUM_32_KEY "int32"
 #define CHAR_KEY "char"
 #define VAR_KEY "variable"
 #define ADDR_KEY "address"
@@ -28,8 +29,8 @@ typedef enum {
 
 typedef enum {
     INVALID,    // Only used by get_argument_type_by_keyword()
-    NUM_8,      // uint8 number
-    NUM_32,     // uint32 number
+    NUM_U8,     // uint8 number
+    NUM_32,     // int32 number
     CHAR,       // 'c'
     VAR,        // Variable (register 0-255)
     ADDR,       // address or label
@@ -56,8 +57,8 @@ typedef struct {
 
 
 ARGUMENT_TYPE get_argument_type_by_keyword(char *keyword) {
-    if (strcmp(keyword, NUM_8_KEY) == 0) {
-        return NUM_8;
+    if (strcmp(keyword, NUM_U8_KEY) == 0) {
+        return NUM_U8;
     } else if (strcmp(keyword, NUM_32_KEY) == 0) {
         return NUM_32;
     } else if (strcmp(keyword, VAR_KEY) == 0) {
@@ -77,8 +78,8 @@ ARGUMENT_TYPE get_argument_type_by_keyword(char *keyword) {
 char *get_argument_type_name(ARGUMENT_TYPE type) {
     switch (type)
     {
-    case NUM_8:
-        return "NUM_8";
+    case NUM_U8:
+        return "NUM_U8";
     case NUM_32:
         return "NUM_32";
     case VAR:
@@ -94,15 +95,6 @@ char *get_argument_type_name(ARGUMENT_TYPE type) {
     default:
         return "UNKNOWN";
     }
-}
-
-
-int is_int(char *str) {
-    for (size_t i = 0; i < strlen(str); i++) {
-        if (!isdigit(str[i]))
-            return 0;
-    }
-    return 1;
 }
 
 

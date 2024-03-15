@@ -1,5 +1,5 @@
 SRC_FILES = $(filter-out instruction-test.c, $(wildcard *.c))
-TEST_SRC_FILES = instruction-test.c types.c trim.c
+TEST_SRC_FILES = instruction-test.c types.c trim.c utils.c
 
 all:
 	gcc -o arabica-compiler $(SRC_FILES) -Wall -Wextra -Werror

@@ -1,4 +1,4 @@
-LOAD_VAL 1 uint32
+LOAD_VAL 1 int32
 READ_VAR 2 variable
 STORE_VAR 3 variable
 ADD 4
