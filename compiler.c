@@ -61,6 +61,7 @@ void write_instruction(PreprocessedInstruction prep, FILE *f) {
     for (int i = 0; i < prep.instr->arg_count; i++) {   // args
         switch (prep.instr->args[i]) {
         case NUM_32:
+        case ADDR:
             fwrite(prep.args[i], sizeof(int32_t), 1, f);
             break;
         case STR:
@@ -69,8 +70,12 @@ void write_instruction(PreprocessedInstruction prep, FILE *f) {
             fwrite(&len, sizeof(uint8_t), 1, f);
             fwrite(str, sizeof(char), len, f);
             break;
-        default:    // case NUM_U8 CHAR VAR or ADDR
+        case NUM_U8:
+        case CHAR:
+        case VAR:
             fwrite(prep.args[i], sizeof(uint8_t), 1, f);
+            break;
+        default:
             break;
         }
     }
@@ -165,6 +170,12 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
 
         // check if label
         if (token_list.count == 1 && token_list.tokens[0][strlen(token_list.tokens[0])-1] == ':') {
+        
+            // check if label name contains " or ', or if label is just ":"
+            if (strlen(token_list.tokens[0]) == 1 || strchr(token_list.tokens[0], '\"') || strchr(token_list.tokens[0], '\'')) {
+                printf("Error: Invalid label name ! (Ln:%lld)\n", line_number);
+                return -1;
+            }
 
             if (label_count == 0) {
                 labels = (LABEL*)malloc(sizeof(LABEL)*(label_count+1));

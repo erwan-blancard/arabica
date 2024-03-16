@@ -76,8 +76,7 @@ ARGUMENT_TYPE get_argument_type_by_keyword(char *keyword) {
 
 
 char *get_argument_type_name(ARGUMENT_TYPE type) {
-    switch (type)
-    {
+    switch (type) {
     case NUM_U8:
         return "NUM_U8";
     case NUM_32:
