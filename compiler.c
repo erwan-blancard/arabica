@@ -416,7 +416,10 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
                             printf("Failed to allocate memory for address offset !\n");
                             return -1;
                         }
-                        *address = -(alignment - labels[l].alignment) -1;      // calculate offset from our current pos
+                        // calculate offset from our current pos.
+                        // -1 is here because vm cursor is "after" the instruction id in the bytecode file.
+                        // ex JMP <label> output: 09<cursor-pos> XX XX XX XX
+                        *address = -(alignment - labels[l].alignment) -1;
                         prep_instructions[i].args[a] = address;
                     }
                 }
