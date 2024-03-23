@@ -62,7 +62,11 @@ void write_instruction(PreprocessedInstruction prep, FILE *f) {
         switch (prep.instr->args[i]) {
         case NUM_32:
         case ADDR:
-            fwrite(prep.args[i], sizeof(int32_t), 1, f);
+            int32_t val = (int32_t)convertToBigEndian(*(uint32_t*)prep.args[i]);
+            // int32_t val = *(int32_t*)prep.args[i];
+            // printf("%d\n", val);
+            // uint32_t uval = convertToBigEndian((val+UINT32_MAX+1));
+            fwrite(&val, sizeof(uint32_t), 1, f);
             break;
         case STR:
             char *str = (char*)prep.args[i];
@@ -127,7 +131,8 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
     int source_name_len = strlen(source_file);
     int ext_name_len = strlen(EXT_NAME);
 
-    char *out_file_name = (char*)malloc(sizeof(char) * (source_name_len+ext_name_len-1));
+    char *out_file_name = (char*)malloc(sizeof(char) * (source_name_len+ext_name_len+1));
+    out_file_name[source_name_len+ext_name_len] = '\0';
 
     if (!out_file_name) {
         printf("Could not create output file !\n");
@@ -159,9 +164,20 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
 
 
     char line_buff[LINE_BUFF_SIZE];
-    size_t line_number = 0;
+    size_t line_number = 1;
     while (fgets(line_buff, LINE_BUFF_SIZE, src) != NULL) {
+        printf("--------------\nLine: %s\n", line_buff);
         TOKEN_LIST token_list = extract_tokens(line_buff);
+
+        if (token_list.count == -1) {
+            printf("Error: Failed to allocate memory when extracting tokens from line ! (Ln:%lld)\n", line_number);
+            return -1;
+        }
+
+        printf("Count: %d\n", token_list.count);
+        for (int i = 0; i < token_list.count; i++) {
+            printf("\"%s\"\n", token_list.tokens[i]);
+        }
 
         if (token_list.count == 0) {
             line_number++;
@@ -170,7 +186,8 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
 
         // check if label
         if (token_list.count == 1 && token_list.tokens[0][strlen(token_list.tokens[0])-1] == ':') {
-        
+            
+            printf("Found label. Token: %s\n", token_list.tokens[0]);
             // check if label name contains " or ', or if label is just ":"
             if (strlen(token_list.tokens[0]) == 1 || strchr(token_list.tokens[0], '\"') || strchr(token_list.tokens[0], '\'')) {
                 printf("Error: Invalid label name ! (Ln:%lld)\n", line_number);
@@ -195,13 +212,15 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
                 }
             }
 
-            char *label_name = (char*)malloc(sizeof(char) * strlen(token_list.tokens[0])-1);
+            char *label_name = (char*)malloc(sizeof(char) * strlen(token_list.tokens[0]));
             if (!label_name) {
                 printf("Failed to allocate memory for label name !\n");
                 return -1;
             }
 
             strncpy(label_name, token_list.tokens[0], strlen(token_list.tokens[0])-1);
+            label_name[strlen(token_list.tokens[0])-1] = '\0';
+            printf("Label name: \"%s\"\n", label_name);
 
             // check if label already exist
             for (int l = 0; l < label_count; l++) {
@@ -352,6 +371,8 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
 
             prep_instructions[instr_count] = prep_instr;
 
+            code_size = code_size + size_of_instruction(prep_instr);
+
             instr_count++;
         }
 
@@ -369,8 +390,8 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
 
     // link labels and variables here
 
+    int32_t alignment = 0;
     for (int i = 0; i < instr_count; i++) {
-        int32_t alignment = 0;
         for (int a = 0; a < prep_instructions[i].instr->arg_count; a++) {
             if (prep_instructions[i].instr->args[a] == VAR) {
                 for (int v = 0; v < var_count; v++) {
@@ -395,7 +416,7 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
                             printf("Failed to allocate memory for address offset !\n");
                             return -1;
                         }
-                        *address = -(alignment - labels[l].alignment);      // calculate offset from our current pos
+                        *address = -(alignment - labels[l].alignment) -1;      // calculate offset from our current pos
                         prep_instructions[i].args[a] = address;
                     }
                 }
@@ -406,8 +427,8 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
                 }
             }
 
-            alignment = alignment + size_of_instruction(prep_instructions[i]);
         }
+        alignment = alignment + size_of_instruction(prep_instructions[i]);
     }
 
     // write to output file
@@ -420,6 +441,7 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
     strncpy(name, program_name, 16);
 
     fwrite("CODE", sizeof(char), 4, out);
+    code_size = convertToBigEndian(code_size);
     fwrite(&code_size, sizeof(uint32_t), 1, out);
     fwrite(name, sizeof(char), 16, out);
 

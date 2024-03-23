@@ -2,8 +2,10 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "types.h"
+#include "trim.h"
 
 
 typedef struct {
@@ -19,10 +21,85 @@ typedef struct {
 //
 // LOAD_STR "Hello"
 // -> {LOAD_STR, "Hello"}
+//
+// returns count as -1 on mem error
 TOKEN_LIST extract_tokens(char *line) {
     TOKEN_LIST result = {0, NULL};
+    size_t line_length = strlen(line);
 
+    size_t i = 0;
+    size_t first_valid_pos = 0;
+    char in_string = 0;      // if we reached "
+    char in_char = 0;        // if we reached '
+    while (i < line_length) {
+        char parse = 0;     // flag to parse the token at end of loop
 
+        if (line[i] == '\"') {
+
+            if (in_string) {
+                parse = 1;
+            } else {
+                in_string = 1;
+            }
+
+        } else if (line[i] == '\'') {
+
+            if (in_char) {
+                parse = 1;
+            } else {
+                in_char = 1;
+            }
+
+        } else if (isblank(line[i])) {
+
+            if (!in_string && !in_char) {
+                if (first_valid_pos == i) {
+                    first_valid_pos++;
+                } else {
+                    parse = 1;
+                }
+            }
+
+        } 
+        
+        if (i != 0 && i == line_length-1 && first_valid_pos-i != 0) {   // parse if we reached the end of the line
+
+            // printf("Parse because end: i=%lld first=%lld\n", i, first_valid_pos);
+            if (line[i] != '\n')
+                i++;
+            parse = 1;
+
+        }
+
+        if (parse) {
+            char *token = cross_strndup(line+first_valid_pos, i-first_valid_pos+(in_string || in_char));
+            if (result.count == 0) {
+                result.tokens = (char**)malloc(sizeof(char*));
+                if (!result.tokens) {
+                    result.count = -1;
+                    return result;
+                }
+            } else {
+                char **tmp = (char**)realloc(result.tokens, sizeof(char*) * (result.count+1));
+                if (!tmp) {
+                    free(result.tokens);
+                    result.count = -1;
+                    return result;
+                } else {
+                    result.tokens = tmp;
+                }
+            }
+
+            result.tokens[result.count] = token;
+            result.count++;
+
+            in_string = 0;
+            in_char = 0;
+            first_valid_pos = i+1;
+        }
+
+        i++;
+    }
 
     return result;
 }

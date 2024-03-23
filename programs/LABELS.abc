@@ -1,0 +1,15 @@
+LOAD_VAL 0
+STORE_VAR i
+
+loop:
+    READ_VAR i
+    LOAD_VAL 1
+    ADD
+    STORE_VAR i
+    READ_VAR i
+    LOAD_VAL 10
+    EQ
+    JMP_IF_ZERO loop
+
+READ_VAR i
+PRINT_VAL

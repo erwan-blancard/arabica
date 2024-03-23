@@ -19,6 +19,8 @@ char * strndup(const char * src, size_t size) {
 
 #endif
 
+char *cross_strndup(const char * src, size_t size) { return strndup(src, size); }
+
 // https://stackoverflow.com/questions/122616/how-do-i-trim-leading-trailing-whitespace-in-a-standard-way
 char *trim(char *s) {
     int l = strlen(s);

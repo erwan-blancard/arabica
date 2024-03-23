@@ -1,0 +1,12 @@
+JMP next
+ask_input:
+    INPUT_STR
+    LOAD_STR "Vous avez entré: "
+    CONCAT
+    PRINT_STR
+    HALT
+
+next:
+    LOAD_VAL 69
+    PRINT_VAL
+JMP ask_input
