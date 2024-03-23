@@ -9,6 +9,8 @@ typedef struct {
 
 TOKEN_LIST extract_tokens(char *line);
 
+void strip_ext(char *fname);
+
 int is_number(char *str);
 int is_signed_number(char *str);
 

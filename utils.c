@@ -104,6 +104,19 @@ TOKEN_LIST extract_tokens(char *line) {
     return result;
 }
 
+// https://stackoverflow.com/questions/43163677/how-do-i-strip-a-file-extension-from-a-string-in-c
+void strip_ext(char *fname) {
+    char *end = fname + strlen(fname);
+
+    while (end > fname && *end != '.' && *end != '\\' && *end != '/') {
+        --end;
+    }
+    if ((end > fname && *end == '.') &&
+        (*(end - 1) != '\\' && *(end - 1) != '/')) {
+        *end = '\0';
+    }  
+}
+
 
 int is_number(char *str) {
     for (size_t i = 0; i < strlen(str); i++) {

@@ -127,23 +127,33 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
         return -1;
     }
 
-    // TODO improve
-    int source_name_len = strlen(source_file);
     int ext_name_len = strlen(EXT_NAME);
 
-    char *out_file_name = (char*)malloc(sizeof(char) * (source_name_len+ext_name_len+1));
-    out_file_name[source_name_len+ext_name_len] = '\0';
+    char *out_file_name = strdup(source_file);
 
     if (!out_file_name) {
-        printf("Could not create output file !\n");
+        printf("Could not allocate mem for output file name !\n");
         return -1;
     }
 
-    strcpy(out_file_name, source_file);
+    // remove extension from path
+    strip_ext(out_file_name);
+
+    size_t prev_len = strlen(out_file_name);
+
+    char *tmp_out_file_name = (char*)realloc(out_file_name, sizeof(char) * (prev_len+strlen(EXT_NAME)+1));
+    if (!tmp_out_file_name) {
+        printf("Could not allocate mem for output file name !\n");
+        return -1;
+    } else {
+        out_file_name = tmp_out_file_name;
+    }
 
     for (int i = 0; i < ext_name_len; i++) {
-        out_file_name[source_name_len+i] = EXT_NAME[i];
+        out_file_name[prev_len+i] = EXT_NAME[i];
     }
+    // null term
+    out_file_name[prev_len+ext_name_len] = '\0';
 
     FILE *out = fopen(out_file_name, "wb");
     if (!out) {
@@ -166,17 +176,11 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
     char line_buff[LINE_BUFF_SIZE];
     size_t line_number = 1;
     while (fgets(line_buff, LINE_BUFF_SIZE, src) != NULL) {
-        printf("--------------\nLine: %s\n", line_buff);
         TOKEN_LIST token_list = extract_tokens(line_buff);
 
         if (token_list.count == -1) {
             printf("Error: Failed to allocate memory when extracting tokens from line ! (Ln:%lld)\n", line_number);
             return -1;
-        }
-
-        printf("Count: %d\n", token_list.count);
-        for (int i = 0; i < token_list.count; i++) {
-            printf("\"%s\"\n", token_list.tokens[i]);
         }
 
         if (token_list.count == 0) {
@@ -187,7 +191,6 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
         // check if label
         if (token_list.count == 1 && token_list.tokens[0][strlen(token_list.tokens[0])-1] == ':') {
             
-            printf("Found label. Token: %s\n", token_list.tokens[0]);
             // check if label name contains " or ', or if label is just ":"
             if (strlen(token_list.tokens[0]) == 1 || strchr(token_list.tokens[0], '\"') || strchr(token_list.tokens[0], '\'')) {
                 printf("Error: Invalid label name ! (Ln:%lld)\n", line_number);
@@ -220,7 +223,6 @@ int compile_to_bytecode(const char *source_file, char *program_name) {
 
             strncpy(label_name, token_list.tokens[0], strlen(token_list.tokens[0])-1);
             label_name[strlen(token_list.tokens[0])-1] = '\0';
-            printf("Label name: \"%s\"\n", label_name);
 
             // check if label already exist
             for (int l = 0; l < label_count; l++) {
