@@ -23,4 +23,5 @@ void *parse_argument_to_uint8(char *token);
 void *parse_argument_to_int32(char *token);
 void *parse_argument_to_char(char *token);
 void *parse_argument_to_str(char *token);
+char *str_with_escaped_chars(char *str);
 #endif

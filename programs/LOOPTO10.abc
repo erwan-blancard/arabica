@@ -7,9 +7,15 @@ loop:
     ADD
     STORE_VAR i
     READ_VAR i
+    PRINT_VAL
+    LOAD_STR "\n"
+    PRINT_STR
+    READ_VAR i
     LOAD_VAL 10
     EQ
     JMP_IF_ZERO loop
 
+LOAD_STR "i:"
+PRINT_STR
 READ_VAR i
 PRINT_VAL

@@ -7,6 +7,7 @@
 #include "types.h"
 #include "trim.h"
 
+char *str_with_escaped_chars(char *str);
 
 typedef struct {
     int count;
@@ -73,6 +74,7 @@ TOKEN_LIST extract_tokens(char *line) {
 
         if (parse) {
             char *token = cross_strndup(line+first_valid_pos, i-first_valid_pos+(in_string || in_char));
+
             if (result.count == 0) {
                 result.tokens = (char**)malloc(sizeof(char*));
                 if (!result.tokens) {
@@ -219,8 +221,73 @@ void *parse_argument_to_str(char *token) {
             } else {
                 memcpy(arg, &term, sizeof(char));     // null term
             }
-            return arg;
+            char *escaped_arg = str_with_escaped_chars(arg);
+            free(arg);
+            return escaped_arg;
         }
     }
     return NULL;
+}
+
+
+char *str_with_escaped_chars(char *str) {
+    int len = (int)strlen(str);
+    char *buff = (char*)malloc(sizeof(char) * (len+1));
+    if (!buff) {
+        printf("Could not parse string with characters escaped for \"%s\": malloc for buffer failed !\n", str);
+        return NULL;
+    }
+
+    int buff_index = 0;
+    int i = 0;
+    while (i < len) {
+        // char to write
+        char c = '\0';
+
+        if (str[i] == '\\' && i+1 < len) {
+            switch (str[i+1]) {
+            case 'a': c = 0x07;
+                break;
+            case 'b': c = 0x08;
+                break;
+            case 'e': c = 0x1B;
+                break;
+            case 'f': c = 0x0C;
+                break;
+            case 'n': c = 0x0A;
+                break;
+            case 'r': c = 0x0D;
+                break;
+            case 't': c = 0x09;
+                break;
+            case 'v': c = 0x0B;
+                break;
+            case '\\': c = 0x5C;
+                break;
+            case '\'': c = 0x27;
+                break;
+            case '\"': c = 0x22;
+                break;
+            case '\?': c = 0x3F;
+                break;
+            default:
+                printf("Fallen in default case for char %c (i:%d, len:%d, str: %s)\n", str[i+1], i-2, len, str);
+                c = '\\';
+                i--;    // do not skip next char (i += 1 instead of 2)
+                break;
+            }
+            i += 2;     // skip char on next iteration (not if nothing found by switch case block, see default case)
+        } else {
+            c = str[i];
+            i++;
+        }
+
+        buff[buff_index] = c;
+        buff_index++;
+
+    }
+
+    buff[buff_index] = '\0';
+
+    return buff;
 }
