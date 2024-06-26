@@ -1,0 +1,211 @@
+menu:
+    LOAD_STR "--- TASK SELECT ---\n"
+    PRINT_STR
+    LOAD_STR "\t0: quit\n"
+    PRINT_STR
+    LOAD_STR "\t1: addition\n"
+    PRINT_STR
+    LOAD_STR "\t2: subtraction\n"
+    PRINT_STR
+    LOAD_STR "\t3: multiplication\n"
+    PRINT_STR
+    LOAD_STR "\t4: division\n"
+    PRINT_STR
+    LOAD_STR "\t5: modulo\n"
+    PRINT_STR
+    LOAD_STR "\t6: concatenate\n"
+    PRINT_STR
+    LOAD_STR "\t7: set char at\n"
+    PRINT_STR
+
+    LOAD_STR "\n"
+    PRINT_STR
+
+menu_input:
+    INPUT_VAL
+    STORE_VAR selection
+
+    READ_VAR selection
+    JMP_IF_ZERO quit
+    READ_VAR selection
+    LOAD_VAL 1
+    EQ
+    JMP_IF_TRUE addition
+
+    READ_VAR selection
+    LOAD_VAL 2
+    EQ
+    JMP_IF_TRUE subtraction
+
+    READ_VAR selection
+    LOAD_VAL 3
+    EQ
+    JMP_IF_TRUE multiplication
+
+    READ_VAR selection
+    LOAD_VAL 4
+    EQ
+    JMP_IF_TRUE division
+
+    READ_VAR selection
+    LOAD_VAL 5
+    EQ
+    JMP_IF_TRUE modulo
+
+    READ_VAR selection
+    LOAD_VAL 6
+    EQ
+    JMP_IF_TRUE concatenate
+
+    READ_VAR selection
+    LOAD_VAL 7
+    EQ
+    JMP_IF_TRUE set_char_at
+
+    LOAD_STR "Invalid entry !\n"
+    PRINT_STR
+    JMP menu_input
+
+
+addition:
+    LOAD_STR "Enter 2 numbers: "
+    PRINT_STR
+    INPUT_VAL
+    INPUT_VAL
+    ADD
+    STORE_VAR result
+
+    LOAD_STR "Result: "
+    PRINT_STR
+    READ_VAR result
+    PRINT_VAL
+    
+    LOAD_STR "\n\n"
+    PRINT_STR
+    JMP menu
+subtraction:
+    LOAD_STR "Enter 2 numbers: "
+    PRINT_STR
+    INPUT_VAL
+    INPUT_VAL
+    SUB
+    STORE_VAR result
+
+    LOAD_STR "Result: "
+    PRINT_STR
+    READ_VAR result
+    PRINT_VAL
+    
+    LOAD_STR "\n\n"
+    PRINT_STR
+    JMP menu
+multiplication:
+    LOAD_STR "Enter 2 numbers: "
+    PRINT_STR
+    INPUT_VAL
+    INPUT_VAL
+    MUL
+    STORE_VAR result
+
+    LOAD_STR "Result: "
+    PRINT_STR
+    READ_VAR result
+    PRINT_VAL
+    
+    LOAD_STR "\n\n"
+    PRINT_STR
+    JMP menu
+division:
+    LOAD_STR "Enter 2 numbers: "
+    PRINT_STR
+    INPUT_VAL
+    INPUT_VAL
+    DIV
+    STORE_VAR result
+
+    LOAD_STR "Result: "
+    PRINT_STR
+    READ_VAR result
+    PRINT_VAL
+    
+    LOAD_STR "\n\n"
+    PRINT_STR
+    JMP menu
+modulo:
+    LOAD_STR "Enter 2 numbers: "
+    PRINT_STR
+    INPUT_VAL
+    INPUT_VAL
+    MOD
+    STORE_VAR result
+
+    LOAD_STR "Result: "
+    PRINT_STR
+    READ_VAR result
+    PRINT_VAL
+    
+    LOAD_STR "\n\n"
+    PRINT_STR
+    JMP menu
+
+concatenate:
+    LOAD_STR "Enter 2 strings: "
+    PRINT_STR
+    INPUT_STR
+    INPUT_STR
+    CONCAT
+    STORE_VAR result
+
+    LOAD_STR "Result: "
+    PRINT_STR
+    READ_VAR result
+    PRINT_STR
+    
+    LOAD_STR "\n\n"
+    PRINT_STR
+    JMP menu
+
+set_char_at:
+    LOAD_STR "Enter a string: "
+    PRINT_STR
+    INPUT_STR
+    STORE_VAR input
+
+    LOAD_STR "Enter the index of the character to replace: "
+    PRINT_STR
+    INPUT_VAL
+    STORE_VAR index
+    
+    LOAD_STR "Enter the new character: "
+    PRINT_STR
+    INPUT_STR
+    STORE_VAR char
+    READ_VAR char
+    STR_LEN
+    JMP_IF_ZERO print_empty_input
+
+    READ_VAR char
+    LOAD_VAL 0
+    GET_CHAR
+    STORE_VAR char
+
+    READ_VAR input
+    READ_VAR index
+    READ_VAR char
+    SET_CHAR
+
+    LOAD_STR "Result: "
+    PRINT_STR
+    READ_VAR input
+    PRINT_STR
+set_char_at_return_to_menu:
+    LOAD_STR "\n\n"
+    PRINT_STR
+    JMP menu
+
+print_empty_input:
+    LOAD_STR "Input is invalid !"
+    JMP set_char_at_return_to_menu
+
+quit:
+    HALT
